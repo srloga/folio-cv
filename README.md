@@ -1,5 +1,7 @@
 # Folio — Criador de CV
 
+![Folio Homepage](folio.jpg)
+
 Editor de currículos numa única página HTML, com modelos de apresentação, pré-visualização, importação/exportação de dados e impressão em PDF pelo navegador.
 
 ## Utilização
