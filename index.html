@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Folio — CV Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════
+   TOKENS
+══════════════════════════════════ */
+:root {
+  --ink:        #1a1a2e;
+  --accent:     #c0392b;
+  --accent2:    #e74c3c;
+  --muted:      #6c757d;
+  --white:      #ffffff;
+  --sidebar-bg: #1e2235;
+  --sidebar-fg: #dde3f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #cdc9c0; color: var(--ink); min-height: 100vh; }
+
+/* ══════════════════════════════════
+   TOP BAR  — 3 zones clearly separated
+══════════════════════════════════ */
+.topbar {
+  background: var(--ink);
+  color: var(--white);
+  display: grid;
+  /* left: brand | center: layout picker | right: actions */
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0;
+  height: 56px;
+  padding: 0;
+  position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 4px 20px rgba(0,0,0,.35);
+}
+
+/* ── Brand ── */
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 22px;
+  border-right: 1px solid rgba(255,255,255,.08);
+  height: 100%;
+}
+.brand-logo {
+  width: 30px; height: 30px; flex-shrink: 0;
+}
+.brand-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.25rem; letter-spacing: -.01em;
+  color: var(--white); line-height: 1;
+}
+.brand-tag {
+  font-size: .58rem; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: rgba(255,255,255,.35);
+  line-height: 1; margin-top: 1px;
+}
+
+/* ── Layout picker (center) ── */
+.layout-zone {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; height: 100%;
+  border-right: 1px solid rgba(255,255,255,.08);
+  padding: 0 20px;
+}
+.layout-label {
+  font-size: .62rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .12em; color: rgba(255,255,255,.3);
+  margin-right: 4px; white-space: nowrap;
+}
+.theme-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.05);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: 6px 10px 5px;
+  cursor: pointer;
+  transition: all .18s;
+  color: rgba(255,255,255,.45);
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  min-width: 58px;
+}
+.theme-btn:hover {
+  background: rgba(255,255,255,.1);
+  border-color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.85);
+  transform: translateY(-1px);
+}
+.theme-btn.active {
+  background: rgba(192,57,43,.18);
+  border-color: var(--accent2);
+  color: #fff;
+}
+/* mini thumbnail inside each button */
+.theme-thumb {
+  width: 38px; height: 24px; border-radius: 3px; overflow: hidden;
+  position: relative; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  background: #f5f5f3;
+}
+/* Classic: dark header strip + red rule */
+.t-classic .theme-thumb { background: #f5f5f3; }
+.t-classic .theme-thumb::before {
+  content:''; position:absolute; top:0;left:0;right:0; height:8px; background:#1a1a2e;
+}
+.t-classic .theme-thumb::after {
+  content:''; position:absolute; top:10px;left:5px;right:5px; height:1.5px; background:#c0392b; border-radius:1px;
+}
+/* Minimal: white + bold top border */
+.t-minimal .theme-thumb { background:#fff; border-top:3px solid #2c2c2c; }
+.t-minimal .theme-thumb::before {
+  content:''; position:absolute; top:7px;left:5px;right:5px; height:1px; background:#e0e0e0;
+}
+/* Sidebar: navy left panel */
+.t-sidebar .theme-thumb { background:#f5f4f0; }
+.t-sidebar .theme-thumb::before {
+  content:''; position:absolute; top:0;left:0;bottom:0; width:13px; background:#2d4a6e;
+}
+
+/* ── Actions zone (right) ── */
+.actions-zone {
+  display: flex; align-items: center; height: 100%;
+  padding: 0 16px; gap: 6px;
+}
+/* Divider inside actions */
+.act-divider {
+  width: 1px; height: 24px; background: rgba(255,255,255,.1);
+  margin: 0 4px; flex-shrink: 0;
+}
+
+/* Group label above cluster */
+.act-group {
+  display: flex; align-items: center; gap: 5px;
+  position: relative;
+}
+.act-group-label {
+  font-size: .55rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: rgba(255,255,255,.25);
+  position: absolute; top: -16px; left: 0; white-space: nowrap;
+}
+
+/* Shared button base */
+.tb-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px; height: 34px;
+  border: none; border-radius: 6px;
+  font-family: 'DM Sans', sans-serif; font-size: .74rem; font-weight: 600;
+  letter-spacing: .03em; cursor: pointer; transition: all .17s;
+  white-space: nowrap;
+}
+/* Ghost */
+.tb-ghost {
+  background: rgba(255,255,255,.06);
+  border: 1.5px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.6);
+}
+.tb-ghost:hover { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.22); }
+/* Green */
+.tb-green { background: #17613a; border: 1.5px solid #1d7a49; color: #fff; }
+.tb-green:hover { background: #1e7a49; }
+.tb-green.loading { opacity: .65; pointer-events: none; }
+/* Blue toggle */
+.tb-toggle { background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.13); color: rgba(255,255,255,.55); }
+.tb-toggle:hover { background: rgba(255,255,255,.13); color: #fff; }
+.tb-toggle.active { background: rgba(45,74,110,.5); border-color: #5a9ac8; color: #9dd4f8; }
+/* Red PDF */
+.tb-red { background: var(--accent); border: 1.5px solid var(--accent2); color: #fff; }
+.tb-red:hover { background: var(--accent2); }
+
+/* Icon inside buttons */
+.tb-icon {
+  width: 16px; height: 16px; opacity: .8; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════
+   APP LAYOUT
+══════════════════════════════════ */
+.app { display: grid; grid-template-columns: 348px 1fr; height: calc(100vh - 56px); }
+
+/* ══════════════════════════════════
+   LEFT SIDEBAR (form panel)
+══════════════════════════════════ */
+.sidebar {
+  background: var(--sidebar-bg); color: var(--sidebar-fg);
+  overflow-y: auto; display: flex; flex-direction: column;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 9px; }
+
+/* Sidebar header */
+.sidebar-header {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.sidebar-header-title {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .12em; color: rgba(255,255,255,.28);
+}
+
+.section-tab { border-bottom: 1px solid rgba(255,255,255,.06); }
+.section-tab-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 18px; cursor: pointer; user-select: none;
+  font-size: .72rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .09em; color: rgba(255,255,255,.42); transition: color .15s;
+  gap: 8px;
+}
+.section-tab-header:hover { color: rgba(255,255,255,.8); }
+.section-tab-header.open { color: rgba(255,255,255,.88); }
+.section-tab-header .tab-icon { font-size: .95rem; opacity: .7; flex-shrink: 0; }
+.section-tab-header .tab-label { flex: 1; }
+.section-tab-header svg { transition: transform .2s; flex-shrink: 0; opacity: .5; }
+.section-tab-header.open svg { transform: rotate(180deg); opacity: 1; }
+.section-tab-body { display: none; padding: 2px 14px 14px; }
+.section-tab-body.open { display: block; }
+
+.form-group { margin-bottom: 8px; }
+.form-group label {
+  display: block; font-size: .63rem; font-weight: 600;
+  letter-spacing: .07em; color: rgba(255,255,255,.32);
+  text-transform: uppercase; margin-bottom: 3px;
+}
+.form-group input, .form-group textarea {
+  width: 100%;
+  background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 5px; color: var(--sidebar-fg);
+  font-family: 'DM Sans', sans-serif; font-size: .83rem;
+  padding: 7px 10px; outline: none; transition: border .15s, background .15s; resize: vertical;
+}
+.form-group input:focus, .form-group textarea:focus {
+  border-color: rgba(192,57,43,.7); background: rgba(255,255,255,.08);
+}
+.form-group textarea { min-height: 54px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.repeat-item {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 7px; padding: 10px 11px; margin-bottom: 8px;
+}
+.repeat-item-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+}
+.repeat-item-num {
+  font-size: .6rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: rgba(255,255,255,.28);
+  background: rgba(255,255,255,.06); border-radius: 3px; padding: 2px 7px;
+}
+.btn-remove {
+  background: none; border: none; color: rgba(255,100,100,.35);
+  cursor: pointer; font-size: .8rem; padding: 3px 5px;
+  border-radius: 3px; transition: all .15s;
+}
+.btn-remove:hover { color: var(--accent2); background: rgba(255,100,100,.1); }
+.btn-add {
+  width: 100%; margin-top: 4px;
+  background: rgba(255,255,255,.03); border: 1.5px dashed rgba(255,255,255,.15);
+  color: rgba(255,255,255,.35); border-radius: 5px; padding: 7px;
+  font-family: 'DM Sans', sans-serif; font-size: .75rem; cursor: pointer;
+  transition: all .16s; letter-spacing: .04em;
+}
+.btn-add:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(192,57,43,.07); }
+
+/* ══════════════════════════════════
+   PREVIEW AREA
+══════════════════════════════════ */
+.preview-wrap {
+  overflow-y: auto; background: #b4b0a7;
+  display: flex; justify-content: center;
+  padding: 32px 24px;
+}
+.preview-wrap::-webkit-scrollbar { width: 7px; }
+.preview-wrap::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 9px; }
+
+/* ══════════════════════════════════
+   CV PAPER (shared base)
+══════════════════════════════════ */
+.cv-paper {
+  background: #fff;
+  width: 210mm;
+  box-shadow: 0 4px 6px rgba(0,0,0,.07), 0 20px 60px rgba(0,0,0,.22);
+  font-size: 9pt;
+  color: #1a1a2e;
+  position: relative;
+}
+
+/* ══════════════════════════════════
+   THEME 1 — CLASSIC
+══════════════════════════════════ */
+.theme-classic { font-family: 'DM Sans', sans-serif; }
+.theme-classic .cv-header {
+  background: #1a1a2e; color: #fff;
+  padding: 26px 36px 22px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.theme-classic .cv-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22pt; line-height: 1.1; color: #fff; margin-bottom: 3px;
+}
+.theme-classic .cv-tagline {
+  font-size: 8pt; font-weight: 300; color: #b8b4c8;
+  letter-spacing: .06em; text-transform: uppercase; margin-bottom: 11px;
+}
+.theme-classic .cv-contacts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 7.5pt; color: #c8c4d8; }
+.theme-classic .cv-contacts span + span::before { content:'·'; margin-right:14px; color:#e74c3c; }
+.theme-classic .cv-body { padding: 22px 36px 30px; }
+.theme-classic .cv-section { margin-bottom: 16px; }
+.theme-classic .cv-section-title {
+  font-family: 'DM Serif Display', serif; font-size: 10pt;
+  border-bottom: 2px solid #c0392b; padding-bottom: 3px; margin-bottom: 10px; color: #1a1a2e;
+}
+.theme-classic .cv-summary { font-size: 8.5pt; line-height: 1.6; color: #333; }
+.theme-classic .cv-exp-item { margin-bottom: 10px; }
+.theme-classic .cv-exp-header { display: flex; justify-content: space-between; align-items: baseline; }
+.theme-classic .cv-exp-company { font-weight: 600; font-size: 9pt; }
+.theme-classic .cv-exp-role { font-size: 8pt; color: #c0392b; font-weight: 500; margin: 1px 0 3px; }
+.theme-classic .cv-exp-date { font-size: 7.5pt; color: #6c757d; white-space: nowrap; margin-left: 8px; }
+.theme-classic .cv-exp-desc { font-size: 8pt; line-height: 1.55; color: #3a3a3a; padding-left: 8px; border-left: 2px solid #e8e4dd; margin-top: 2px; }
+.theme-classic .cv-exp-desc p { margin-bottom: 1px; }
+.theme-classic .cv-edu-item { margin-bottom: 8px; }
+.theme-classic .cv-edu-header { display: flex; justify-content: space-between; align-items: baseline; }
+.theme-classic .cv-edu-school { font-weight: 600; font-size: 9pt; }
+.theme-classic .cv-edu-course { font-size: 8pt; color: #555; margin-top: 1px; }
+.theme-classic .cv-edu-location { font-size: 7.5pt; color: #6c757d; }
+.theme-classic .cv-skills-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.theme-classic .cv-skill-tag { background:#f0ece4; border:1px solid #ddd8d0; border-radius:3px; padding:2px 8px; font-size:7.5pt; font-weight:500; color:#444; }
+
+/* ══════════════════════════════════
+   THEME 2 — MINIMAL
+══════════════════════════════════ */
+.theme-minimal { font-family: 'Lato', sans-serif; }
+.theme-minimal .cv-header { padding: 32px 40px 22px; border-bottom: 3px solid #2c2c2c; }
+.theme-minimal .cv-name { font-family:'Lato',sans-serif; font-weight:900; font-size:24pt; letter-spacing:-.02em; color:#2c2c2c; margin-bottom:2px; }
+.theme-minimal .cv-tagline { font-size:9pt; font-weight:300; color:#888; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; }
+.theme-minimal .cv-contacts { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:7.8pt; color:#555; }
+.theme-minimal .cv-contacts span + span::before { content:'/'; margin-right:18px; color:#bbb; }
+.theme-minimal .cv-body { padding: 22px 40px 30px; }
+.theme-minimal .cv-section { margin-bottom: 17px; }
+.theme-minimal .cv-section-title { font-family:'Lato',sans-serif; font-weight:900; font-size:7.5pt; text-transform:uppercase; letter-spacing:.14em; color:#888; margin-bottom:10px; padding-bottom:4px; border-bottom:1px solid #e0e0e0; }
+.theme-minimal .cv-summary { font-size:8.5pt; line-height:1.65; color:#444; }
+.theme-minimal .cv-exp-item { margin-bottom:11px; display:grid; grid-template-columns:1fr auto; column-gap:12px; }
+.theme-minimal .cv-exp-main { grid-column:1; }
+.theme-minimal .cv-exp-date-col { grid-column:2; font-size:7.5pt; color:#999; white-space:nowrap; padding-top:1px; text-align:right; }
+.theme-minimal .cv-exp-company { font-weight:700; font-size:9.5pt; color:#2c2c2c; }
+.theme-minimal .cv-exp-role { font-size:8pt; color:#666; font-style:italic; margin:1px 0 3px; }
+.theme-minimal .cv-exp-desc { font-size:8pt; line-height:1.55; color:#444; }
+.theme-minimal .cv-exp-desc p { margin-bottom:1px; }
+.theme-minimal .cv-edu-item { margin-bottom:8px; display:grid; grid-template-columns:1fr auto; gap:4px 12px; }
+.theme-minimal .cv-edu-school { font-weight:700; font-size:9pt; }
+.theme-minimal .cv-edu-course { font-size:8pt; color:#666; grid-column:1; }
+.theme-minimal .cv-edu-date-col { font-size:7.5pt; color:#999; text-align:right; white-space:nowrap; }
+.theme-minimal .cv-skills-list { display:flex; flex-wrap:wrap; gap:5px; }
+.theme-minimal .cv-skill-tag { background:transparent; border:1px solid #ccc; border-radius:2px; padding:2px 9px; font-size:7.8pt; color:#555; }
+
+/* ══════════════════════════════════
+   THEME 3 — SIDEBAR
+══════════════════════════════════ */
+.theme-sidebar { font-family:'DM Sans',sans-serif; display:flex !important; flex-direction:row !important; }
+.theme-sidebar .cv-left {
+  width: 68mm; min-height: 100%;
+  background: #2d4a6e; color: #e8f0f8;
+  padding: 26px 18px 30px; flex-shrink: 0;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.theme-sidebar .cv-right { flex:1; padding:26px 22px 30px; background:#f5f4f0; min-height:100%; }
+.theme-sidebar .cv-name { font-family:'DM Serif Display',serif; font-size:18pt; line-height:1.15; color:#fff; margin-bottom:3px; }
+.theme-sidebar .cv-tagline { font-size:7.5pt; color:#96aec8; text-transform:uppercase; letter-spacing:.07em; margin-bottom:16px; font-weight:300; }
+.theme-sidebar .cv-left .cv-section { margin-bottom:16px; }
+.theme-sidebar .cv-left .cv-section-title { font-size:7pt; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:#7894b0; border-bottom:1px solid #4a6a8e; padding-bottom:4px; margin-bottom:8px; }
+.theme-sidebar .cv-contacts { font-size:7.5pt; color:#b8cce0; display:flex; flex-direction:column; gap:4px; }
+.theme-sidebar .cv-contacts span { display:block; word-break:break-all; }
+.theme-sidebar .cv-edu-item { margin-bottom:9px; }
+.theme-sidebar .cv-edu-school { font-weight:600; font-size:8pt; color:#fff; }
+.theme-sidebar .cv-edu-course { font-size:7.5pt; color:#9cb8d4; margin-top:1px; }
+.theme-sidebar .cv-edu-location { font-size:7pt; color:#7a9ab8; }
+.theme-sidebar .cv-skills-list { display:flex; flex-direction:column; gap:3px; }
+.theme-sidebar .cv-skill-tag { font-size:7.5pt; color:#c0d4e8; padding:2px 0; display:flex; align-items:center; gap:6px; }
+.theme-sidebar .cv-skill-tag::before { content:''; display:block; width:4px; height:4px; border-radius:50%; background:#7a9ab8; flex-shrink:0; }
+.theme-sidebar .cv-right .cv-section { margin-bottom:15px; }
+.theme-sidebar .cv-right .cv-section-title { font-size:7.5pt; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#2d4a6e; border-bottom:2px solid #2d4a6e; padding-bottom:3px; margin-bottom:10px; }
+.theme-sidebar .cv-summary { font-size:8.5pt; line-height:1.6; color:#3a3a3a; }
+.theme-sidebar .cv-exp-item { margin-bottom:10px; }
+.theme-sidebar .cv-exp-header { display:flex; justify-content:space-between; align-items:baseline; }
+.theme-sidebar .cv-exp-company { font-weight:700; font-size:9pt; color:#1a1a2e; }
+.theme-sidebar .cv-exp-date { font-size:7.5pt; color:#888; white-space:nowrap; margin-left:6px; }
+.theme-sidebar .cv-exp-role { font-size:8pt; color:#2d4a6e; font-weight:500; margin:1px 0 3px; }
+.theme-sidebar .cv-exp-desc { font-size:8pt; line-height:1.55; color:#3a3a3a; padding-left:8px; border-left:2px solid #d0cfc8; margin-top:2px; }
+.theme-sidebar .cv-exp-desc p { margin-bottom:1px; }
+
+/* ══════════════════════════════════
+   PRINT
+══════════════════════════════════ */
+@media print {
+  body { background: white; }
+  .topbar, .sidebar { display: none !important; }
+  .preview-wrap { padding: 0; background: white; overflow: visible; display: block; }
+  .app { display: block; height: auto; }
+  .cv-paper { box-shadow: none; width: 210mm; margin: 0 auto; }
+  .theme-classic .cv-header { background: #1a1a2e !important; color: #ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .theme-classic .cv-name { color: #ffffff !important; }
+  .theme-classic .cv-tagline { color: #b8b4c8 !important; }
+  .theme-classic .cv-contacts { color: #c8c4d8 !important; }
+  .theme-sidebar .cv-left { background: #2d4a6e !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .theme-sidebar .cv-name { color: #ffffff !important; }
+  .theme-sidebar .cv-tagline { color: #96aec8 !important; }
+  @page { size: A4; margin: 0; }
+}
+
+/* ══════════════════════════════════
+   TOAST & SPINNER
+══════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #1a6e3c; color: #fff; padding: 10px 22px; border-radius: 7px;
+  font-size: .82rem; font-weight: 500; z-index: 999;
+  opacity: 0; transition: opacity .3s; pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.toast.show { opacity: 1; }
+.spinner-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.5); align-items: center; justify-content: center; }
+.spinner-overlay.show { display: flex; }
+.spinner-box { background: #fff; border-radius: 12px; padding: 28px 36px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.spinner { width: 36px; height: 36px; border: 3px solid #ddd; border-top-color: #c0392b; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner-label { font-size: .88rem; color: #555; }
+</style>
+</head>
+<body>
+
+<!-- SPINNER -->
+<div class="spinner-overlay" id="spinner">
+  <div class="spinner-box">
+    <div class="spinner"></div>
+    <div class="spinner-label">A traduzir para inglês…</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════
+     TOP BAR  —  3-zone layout
+════════════════════════════════ -->
+<div class="topbar">
+
+  <!-- ZONE 1: Brand -->
+  <div class="brand">
+    <!-- Logo SVG: stylised "F" made of stacked document lines -->
+    <svg class="brand-logo" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Document shape -->
+      <rect x="4" y="2" width="19" height="24" rx="3" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.2"/>
+      <!-- Folded corner -->
+      <path d="M17 2 L23 8" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M17 2 L17 8 L23 8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1"/>
+      <!-- Red accent bar (top line = header) -->
+      <rect x="7" y="11" width="13" height="2.2" rx="1.1" fill="#e74c3c"/>
+      <!-- Text lines -->
+      <rect x="7" y="15.5" width="9" height="1.5" rx=".75" fill="#ffffff" fill-opacity="0.35"/>
+      <rect x="7" y="18.5" width="11" height="1.5" rx=".75" fill="#ffffff" fill-opacity="0.22"/>
+      <rect x="7" y="21.5" width="7" height="1.5" rx=".75" fill="#ffffff" fill-opacity="0.22"/>
+    </svg>
+    <div>
+      <div class="brand-name">Folio</div>
+      <div class="brand-tag">CV Editor</div>
+    </div>
+  </div>
+
+  <!-- ZONE 2: Layout picker -->
+  <div class="layout-zone">
+    <span class="layout-label">Modelo</span>
+    <button class="theme-btn t-classic active" data-theme="classic" onclick="setTheme('classic')">
+      <span class="theme-thumb"></span>Classic
+    </button>
+    <button class="theme-btn t-minimal" data-theme="minimal" onclick="setTheme('minimal')">
+      <span class="theme-thumb"></span>Minimal
+    </button>
+    <button class="theme-btn t-sidebar" data-theme="sidebar" onclick="setTheme('sidebar')">
+      <span class="theme-thumb"></span>Sidebar
+    </button>
+  </div>
+
+  <!-- ZONE 3: Actions -->
+  <div class="actions-zone">
+
+    <!-- Exemplos -->
+    <div class="act-group">
+      <button class="tb-btn tb-ghost" onclick="loadExample()" title="Preencher com dados de exemplo em português">
+        <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1.5a6.5 6.5 0 100 13A6.5 6.5 0 008 1.5zM7 5h2v1.5H7V5zm0 2.5h2v4H7v-4z" fill="currentColor" fill-opacity=".7"/></svg>
+        Exemplo PT
+      </button>
+      <button class="tb-btn tb-ghost" onclick="loadExampleEN()" title="Preencher com dados de exemplo em inglês">
+        <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-opacity=".6" stroke-width="1.2"/><path d="M8 1.5c-1.5 2-2.5 4-2.5 6.5s1 4.5 2.5 6.5M8 1.5c1.5 2 2.5 4 2.5 6.5S9.5 12.5 8 14.5M1.5 8h13" stroke="currentColor" stroke-opacity=".6" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Exemplo EN
+      </button>
+    </div>
+
+    <div class="act-divider"></div>
+
+    <!-- AI Translate -->
+    <button class="tb-btn tb-green" id="btn-en" onclick="translateToEN()" title="Traduzir todo o conteúdo para inglês automaticamente">
+      <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h7M5.5 2v2M2 4c0 2.5 1.5 4.5 3.5 5.5M4 9.5C5.5 10.5 7 11 8 11M9 4l3 8M9 4l-1 3M15 12l-3-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Traduzir EN
+    </button>
+
+    <div class="act-divider"></div>
+
+    <!-- Ficheiros -->
+    <button class="tb-btn tb-ghost" onclick="saveJSON()" title="Guardar progresso como ficheiro JSON">
+      <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><path d="M4 13h8M8 3v7M5 7l3 3 3-3" stroke="currentColor" stroke-opacity=".75" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Guardar
+    </button>
+    <button class="tb-btn tb-ghost" onclick="loadJSON()" title="Importar ficheiro JSON guardado anteriormente">
+      <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><path d="M4 13h8M8 10V3M5 6l3-3 3 3" stroke="currentColor" stroke-opacity=".75" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Importar
+    </button>
+
+    <div class="act-divider"></div>
+
+    <!-- Página & PDF -->
+    <button class="tb-btn tb-toggle active" id="btn-autofit" onclick="toggleAutoFit()" title="Auto-ajustar conteúdo para caber numa só página A4">
+      <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><rect x="3" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" stroke-opacity=".8" stroke-width="1.2"/><path d="M6 5h4M6 8h4M6 11h2" stroke="currentColor" stroke-opacity=".8" stroke-width="1.2" stroke-linecap="round"/></svg>
+      1 Página
+    </button>
+    <button class="tb-btn tb-red" onclick="printCV()" title="Exportar como PDF">
+      <svg class="tb-icon" viewBox="0 0 16 16" fill="none"><path d="M4 5V3h8v2M3 5h10a1 1 0 011 1v5a1 1 0 01-1 1h-1v-2H4v2H3a1 1 0 01-1-1V6a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 11h6v2H5v-2z" fill="currentColor" fill-opacity=".4" stroke="currentColor" stroke-width="1"/></svg>
+      Exportar PDF
+    </button>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     APP
+════════════════════════════════ -->
+<div class="app">
+
+  <!-- LEFT PANEL -->
+  <div class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+      <div class="sidebar-header-title">Conteúdo do Currículo</div>
+    </div>
+
+    <div class="section-tab">
+      <div class="section-tab-header open" onclick="toggleTab(this)">
+        <span class="tab-icon">👤</span>
+        <span class="tab-label">Dados Pessoais</span>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="section-tab-body open">
+        <div class="form-group"><label>Nome Completo</label><input id="f-name" oninput="render()" placeholder="Ex: João Silva"></div>
+        <div class="form-group"><label>Título / Área Profissional</label><input id="f-title" oninput="render()" placeholder="Ex: Desenvolvedor Web Júnior"></div>
+        <div class="form-group"><label>Endereço</label><input id="f-address" oninput="render()" placeholder="Cidade, País"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Telefone</label><input id="f-phone" oninput="render()" placeholder="+351 900 000 000"></div>
+          <div class="form-group"><label>E-mail</label><input id="f-email" oninput="render()" placeholder="email@mail.com"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>LinkedIn / Portfolio</label><input id="f-linkedin" oninput="render()" placeholder="linkedin.com/in/..."></div>
+          <div class="form-group"><label>GitHub / Outro</label><input id="f-github" oninput="render()" placeholder="github.com/..."></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-tab">
+      <div class="section-tab-header" onclick="toggleTab(this)">
+        <span class="tab-icon">📝</span>
+        <span class="tab-label">Resumo / Summary</span>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="section-tab-body">
+        <div class="form-group"><label>Texto</label><textarea id="f-summary" oninput="render()" rows="5" placeholder="Breve descrição profissional..."></textarea></div>
+      </div>
+    </div>
+
+    <div class="section-tab">
+      <div class="section-tab-header" onclick="toggleTab(this)">
+        <span class="tab-icon">💼</span>
+        <span class="tab-label">Experiência Profissional</span>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="section-tab-body">
+        <div id="exp-list"></div>
+        <button class="btn-add" onclick="addExp()">+ Adicionar Experiência</button>
+      </div>
+    </div>
+
+    <div class="section-tab">
+      <div class="section-tab-header" onclick="toggleTab(this)">
+        <span class="tab-icon">🎓</span>
+        <span class="tab-label">Formação Académica</span>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="section-tab-body">
+        <div id="edu-list"></div>
+        <button class="btn-add" onclick="addEdu()">+ Adicionar Formação</button>
+      </div>
+    </div>
+
+    <div class="section-tab">
+      <div class="section-tab-header" onclick="toggleTab(this)">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">Habilidades / Skills</span>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="section-tab-body">
+        <div class="form-group">
+          <label>Separadas por vírgula</label>
+          <textarea id="f-skills" oninput="render()" rows="4" placeholder="HTML, CSS, JavaScript, PHP..."></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap">
+    <div class="cv-paper theme-classic" id="cv-paper"></div>
+  </div>
+
+</div>
+
+<input type="file" id="json-file-input" accept=".json" style="display:none" onchange="handleJSONFile(event)">
+
+<script>
+// ── STATE ──
+let state = { name:'',title:'',address:'',phone:'',email:'',linkedin:'',github:'',summary:'',experiences:[],educations:[],skills:'' };
+let currentTheme = 'classic';
+let expId = 0, eduId = 0;
+let autoFit = true;
+
+const LABELS = {
+  summary:    { classic:'Summary',                minimal:'Summary',    sidebar:'Profile'       },
+  experience: { classic:'Professional Experience', minimal:'Experience', sidebar:'Work Experience' },
+  education:  { classic:'Education',              minimal:'Education',  sidebar:'Education'     },
+  skills:     { classic:'Technical Skills',       minimal:'Skills',     sidebar:'Skills'        }
+};
+
+// ── THEME ──
+function setTheme(t) {
+  currentTheme = t;
+  document.getElementById('cv-paper').className = `cv-paper theme-${t}`;
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
+  render();
+}
+
+// ── TABS ──
+function toggleTab(h) {
+  h.classList.toggle('open');
+  h.nextElementSibling.classList.toggle('open');
+}
+
+// ── ADD EXP ──
+function addExp(data) {
+  const id = expId++;
+  const d = data || {};
+  const div = document.createElement('div');
+  div.className = 'repeat-item';
+  div.innerHTML = `
+    <div class="repeat-item-header">
+      <span class="repeat-item-num">#${id+1} Experiência</span>
+      <button class="btn-remove" onclick="this.closest('.repeat-item').remove();render()" title="Remover">✕</button>
+    </div>
+    <div class="form-group"><label>Empresa / Company</label><input class="exp-company" oninput="render()" value="${e(d.company)}"></div>
+    <div class="form-group"><label>Cargo / Role</label><input class="exp-role" oninput="render()" value="${e(d.role)}"></div>
+    <div class="form-group"><label>Período / Period</label><input class="exp-date" oninput="render()" value="${e(d.date)}" placeholder="Jan 2023 – Atual"></div>
+    <div class="form-group"><label>Descrição (use • por linha)</label><textarea class="exp-desc" oninput="render()" rows="4">${e(d.desc)}</textarea></div>`;
+  document.getElementById('exp-list').appendChild(div);
+  render();
+}
+
+// ── ADD EDU ──
+function addEdu(data) {
+  const id = eduId++;
+  const d = data || {};
+  const div = document.createElement('div');
+  div.className = 'repeat-item';
+  div.innerHTML = `
+    <div class="repeat-item-header">
+      <span class="repeat-item-num">#${id+1} Formação</span>
+      <button class="btn-remove" onclick="this.closest('.repeat-item').remove();render()" title="Remover">✕</button>
+    </div>
+    <div class="form-group"><label>Instituição / School</label><input class="edu-school" oninput="render()" value="${e(d.school)}"></div>
+    <div class="form-group"><label>Curso / Degree</label><input class="edu-course" oninput="render()" value="${e(d.course)}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Localização</label><input class="edu-location" oninput="render()" value="${e(d.location)}"></div>
+      <div class="form-group"><label>Período</label><input class="edu-date" oninput="render()" value="${e(d.date)}"></div>
+    </div>`;
+  document.getElementById('edu-list').appendChild(div);
+  render();
+}
+
+function e(v) { return v ? String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;') : ''; }
+function h(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+
+// ── COLLECT ──
+function collect() {
+  state.name=v('f-name'); state.title=v('f-title'); state.address=v('f-address');
+  state.phone=v('f-phone'); state.email=v('f-email');
+  state.linkedin=v('f-linkedin'); state.github=v('f-github');
+  state.summary=v('f-summary'); state.skills=v('f-skills');
+  state.experiences=[...document.querySelectorAll('#exp-list .repeat-item')].map(el=>({
+    company:el.querySelector('.exp-company').value,
+    role:el.querySelector('.exp-role').value,
+    date:el.querySelector('.exp-date').value,
+    desc:el.querySelector('.exp-desc').value
+  }));
+  state.educations=[...document.querySelectorAll('#edu-list .repeat-item')].map(el=>({
+    school:el.querySelector('.edu-school').value,
+    course:el.querySelector('.edu-course').value,
+    location:el.querySelector('.edu-location').value,
+    date:el.querySelector('.edu-date').value
+  }));
+}
+
+// ── RENDER ──
+function render() {
+  collect();
+  const t = currentTheme;
+  const lbl = LABELS;
+
+  const contacts = [state.address,state.phone,state.email,state.linkedin,state.github]
+    .filter(Boolean).map(c=>`<span>${h(c)}</span>`).join('');
+
+  const expHTML = state.experiences.map(ex => {
+    const lines = ex.desc.split('\n').filter(Boolean).map(l=>`<p>• ${h(l.replace(/^[•\-]\s*/,''))}</p>`).join('');
+    return `<div class="cv-exp-item">
+      <div class="cv-exp-header"><span class="cv-exp-company">${h(ex.company)}</span><span class="cv-exp-date">${h(ex.date)}</span></div>
+      <div class="cv-exp-role">${h(ex.role)}</div>
+      ${lines?`<div class="cv-exp-desc">${lines}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const expHTMLMinimal = state.experiences.map(ex => {
+    const lines = ex.desc.split('\n').filter(Boolean).map(l=>`<p>• ${h(l.replace(/^[•\-]\s*/,''))}</p>`).join('');
+    return `<div class="cv-exp-item">
+      <div class="cv-exp-main"><div class="cv-exp-company">${h(ex.company)}</div><div class="cv-exp-role">${h(ex.role)}</div>${lines?`<div class="cv-exp-desc">${lines}</div>`:''}</div>
+      <div class="cv-exp-date-col">${h(ex.date)}</div>
+    </div>`;
+  }).join('');
+
+  const eduHTMLClassic = state.educations.map(ed=>`
+    <div class="cv-edu-item">
+      <div class="cv-edu-header"><span class="cv-edu-school">${h(ed.school)}</span><span class="cv-edu-location">${h(ed.location)}</span></div>
+      <div class="cv-edu-course">${h(ed.course)}${ed.date?' · '+h(ed.date):''}</div>
+    </div>`).join('');
+
+  const eduHTMLMinimal = state.educations.map(ed=>`
+    <div class="cv-edu-item">
+      <div class="cv-edu-school">${h(ed.school)}</div>
+      <div class="cv-edu-date-col">${h(ed.date)}</div>
+      <div class="cv-edu-course">${h(ed.course)}${ed.location?' — '+h(ed.location):''}</div>
+    </div>`).join('');
+
+  const eduHTMLSidebar = state.educations.map(ed=>`
+    <div class="cv-edu-item">
+      <div class="cv-edu-school">${h(ed.school)}</div>
+      <div class="cv-edu-course">${h(ed.course)}</div>
+      <div class="cv-edu-location">${h(ed.location)}${ed.date?' · '+h(ed.date):''}</div>
+    </div>`).join('');
+
+  const skillsArr = state.skills.split(',').map(s=>s.trim()).filter(Boolean);
+  const skillTagsFlat = skillsArr.map(s=>`<span class="cv-skill-tag">${h(s)}</span>`).join('');
+
+  let html = '';
+  if (t === 'classic') {
+    html = `
+    <div class="cv-header">
+      <div class="cv-name">${h(state.name)||'<span style="opacity:.2">Seu Nome</span>'}</div>
+      ${state.title?`<div class="cv-tagline">${h(state.title)}</div>`:''}
+      ${contacts?`<div class="cv-contacts">${contacts}</div>`:''}
+    </div>
+    <div class="cv-body">
+      ${state.summary?`<div class="cv-section"><div class="cv-section-title">${lbl.summary[t]}</div><div class="cv-summary">${h(state.summary)}</div></div>`:''}
+      ${state.experiences.length?`<div class="cv-section"><div class="cv-section-title">${lbl.experience[t]}</div>${expHTML}</div>`:''}
+      ${state.educations.length?`<div class="cv-section"><div class="cv-section-title">${lbl.education[t]}</div>${eduHTMLClassic}</div>`:''}
+      ${skillsArr.length?`<div class="cv-section"><div class="cv-section-title">${lbl.skills[t]}</div><div class="cv-skills-list">${skillTagsFlat}</div></div>`:''}
+    </div>`;
+  } else if (t === 'minimal') {
+    html = `
+    <div class="cv-header">
+      <div class="cv-name">${h(state.name)||'<span style="opacity:.2">Your Name</span>'}</div>
+      ${state.title?`<div class="cv-tagline">${h(state.title)}</div>`:''}
+      ${contacts?`<div class="cv-contacts">${contacts}</div>`:''}
+    </div>
+    <div class="cv-body">
+      ${state.summary?`<div class="cv-section"><div class="cv-section-title">${lbl.summary[t]}</div><div class="cv-summary">${h(state.summary)}</div></div>`:''}
+      ${state.experiences.length?`<div class="cv-section"><div class="cv-section-title">${lbl.experience[t]}</div>${expHTMLMinimal}</div>`:''}
+      ${state.educations.length?`<div class="cv-section"><div class="cv-section-title">${lbl.education[t]}</div>${eduHTMLMinimal}</div>`:''}
+      ${skillsArr.length?`<div class="cv-section"><div class="cv-section-title">${lbl.skills[t]}</div><div class="cv-skills-list">${skillTagsFlat}</div></div>`:''}
+    </div>`;
+  } else if (t === 'sidebar') {
+    html = `
+    <div class="cv-left">
+      <div class="cv-name">${h(state.name)||'<span style="opacity:.2">Name</span>'}</div>
+      ${state.title?`<div class="cv-tagline">${h(state.title)}</div>`:''}
+      ${contacts?`<div class="cv-section"><div class="cv-section-title">Contact</div><div class="cv-contacts">${contacts}</div></div>`:''}
+      ${state.educations.length?`<div class="cv-section"><div class="cv-section-title">${lbl.education[t]}</div>${eduHTMLSidebar}</div>`:''}
+      ${skillsArr.length?`<div class="cv-section"><div class="cv-section-title">${lbl.skills[t]}</div><div class="cv-skills-list">${skillTagsFlat}</div></div>`:''}
+    </div>
+    <div class="cv-right">
+      ${state.summary?`<div class="cv-section"><div class="cv-section-title">${lbl.summary[t]}</div><div class="cv-summary">${h(state.summary)}</div></div>`:''}
+      ${state.experiences.length?`<div class="cv-section"><div class="cv-section-title">${lbl.experience[t]}</div>${expHTML}</div>`:''}
+    </div>`;
+  }
+  document.getElementById('cv-paper').innerHTML = html;
+}
+
+// ── JSON ──
+function saveJSON() {
+  collect();
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'folio-cv.json'; a.click();
+}
+function loadJSON() { document.getElementById('json-file-input').click(); }
+function handleJSONFile(evt) {
+  const file = evt.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { try { applyState(JSON.parse(e.target.result)); } catch { showToast('JSON inválido','error'); } };
+  reader.readAsText(file); evt.target.value='';
+}
+function applyState(data) {
+  ['name','title','address','phone','email','linkedin','github','summary','skills']
+    .forEach(f => { const el=document.getElementById('f-'+f); if(el&&data[f]!==undefined) el.value=data[f]; });
+  document.getElementById('exp-list').innerHTML='';
+  document.getElementById('edu-list').innerHTML='';
+  expId=0; eduId=0;
+  (data.experiences||[]).forEach(ex=>addExp(ex));
+  (data.educations||[]).forEach(ed=>addEdu(ed));
+  render();
+}
+
+// ── EXAMPLES ──
+function loadExample() {
+  applyState({
+    name:'Ana Martins', title:'Profissional de Exemplo',
+    address:'Porto, Portugal', phone:'+351 900 000 000',
+    email:'ana.exemplo@example.com', linkedin:'@perfil-exemplo', github:'@exemplo',
+    summary:'Profissional de Exemplo com experiência na criação de ferramentas digitais, landing pages para conversão de leads e sites completos de e-commerce. Habilidade em aumentar o tráfego por meio de Google Ads, SEO e otimização de domínio.',
+    experiences:[
+      { company:'Empresa Exemplo', role:'Desenvolvedor Web', date:'Abr 2023 - Set 2025',
+        desc:'• Desenvolvi projetos de e-commerce, sites, plataformas e ferramentas digitais\n• Utilizei PHP, HTML, CSS, JavaScript e MySQL\n• Implementei Prestashop com SEO e Google Ads' },
+      { company:'Serviços Exemplo', role:'Assistente de Operações', date:'Mai 2025 - Atual',
+        desc:'• Digitalização de arquivos e gestão de logística de armazém' },
+      { company:'Organização Exemplo', role:'Administrativo', date:'Jun 2025 - Nov 2025',
+        desc:'• Gestão de contratos e clientes\n• Relatórios em Excel\n• Comunicação em inglês e espanhol' },
+      { company:'Comércio Exemplo', role:'Comercial / Rececionista', date:'Fev 2023 - Abr 2025',
+        desc:'• Receção, prospeção de clientes e pós-venda\n• Suporte administrativo e marketing digital' },
+    ],
+    educations:[
+      { school:'Instituto Exemplo', course:'Técnico em Programação WEB (Nota: 20)', location:'Portugal', date:'' },
+      { school:'Escola Técnica Exemplo', course:'Técnico em Informática (Nota: 17)', location:'Brasil', date:'' },
+      { school:'Escola Exemplo', course:'Ensino Secundário', location:'Brasil', date:'' },
+    ],
+    skills:'HTML, CSS, JavaScript, PHP, MySQL, Prestashop, Google Ads, SEO, Microsoft Office, WordPress, Git, Atendimento ao Cliente, Inglês Avançado, Espanhol Avançado'
+  });
+}
+
+function loadExampleEN() {
+  applyState({
+    name:'Ana Martins', title:'Example Professional',
+    address:'Porto, Portugal', phone:'+351 900 000 000',
+    email:'ana.exemplo@example.com', linkedin:'@perfil-exemplo', github:'@exemplo',
+    summary:'Example Professional with hands-on experience building digital tools, lead-conversion landing pages and full e-commerce websites. Skilled at driving traffic through Google Ads, SEO and domain optimisation.',
+    experiences:[
+      { company:'Empresa Exemplo', role:'Web Developer', date:'Apr 2023 - Sep 2025',
+        desc:'• Developed e-commerce projects, websites, platforms and digital tools\n• Worked with PHP, HTML, CSS, JavaScript and MySQL\n• Implemented Prestashop with SEO and Google Ads integration' },
+      { company:'Serviços Exemplo', role:'Operations Assistant', date:'May 2025 - Present',
+        desc:'• File digitisation and warehouse logistics management' },
+      { company:'Organização Exemplo', role:'Administrative Assistant', date:'Jun 2025 - Nov 2025',
+        desc:'• Contract and client management\n• Reporting in Excel\n• Communication in English and Spanish' },
+      { company:'Comércio Exemplo', role:'Sales Representative & Receptionist', date:'Feb 2023 - Apr 2025',
+        desc:'• Reception, client prospecting and after-sales support\n• Administrative support and digital marketing' },
+    ],
+    educations:[
+      { school:'Instituto Exemplo', course:'Web Programming Technician (Grade: 20/20)', location:'Portugal', date:'' },
+      { school:'Escola Técnica Exemplo', course:'IT Technician (Grade: 17/20)', location:'Brasil', date:'' },
+      { school:'Escola Exemplo', course:'Secondary Education', location:'Brasil', date:'' },
+    ],
+    skills:'HTML, CSS, JavaScript, PHP, MySQL, Prestashop, Google Ads, SEO, Microsoft Office, WordPress, Git, Customer Service, Advanced English, Advanced Spanish'
+  });
+}
+
+// ── AUTO FIT 1 PAGE ──
+function toggleAutoFit() {
+  autoFit = !autoFit;
+  const btn = document.getElementById('btn-autofit');
+  btn.classList.toggle('active', autoFit);
+  showToast(autoFit ? '📄 Auto-ajuste para 1 página activado' : '📄 Múltiplas páginas permitidas');
+}
+
+window.addEventListener('beforeprint', () => {
+  if (!autoFit) return;
+  const paper = document.getElementById('cv-paper');
+  const a4H = Math.round(paper.offsetWidth * 297 / 210);
+  const actualH = paper.scrollHeight;
+  if (actualH > a4H * 1.01) {
+    const scale = a4H / actualH;
+    paper.style.transformOrigin = 'top left';
+    paper.style.transform = `scale(${scale.toFixed(5)})`;
+    paper.style.width = `${Math.round(paper.offsetWidth / scale)}px`;
+    paper.style.overflow = 'hidden';
+    paper.style.maxHeight = `${a4H}px`;
+  }
+});
+window.addEventListener('afterprint', () => {
+  const p = document.getElementById('cv-paper');
+  p.style.transform = p.style.transformOrigin = p.style.width = p.style.overflow = p.style.maxHeight = '';
+});
+
+function printCV() { window.print(); }
+
+// ── TRANSLATE ──
+async function translateToEN() {
+  collect();
+  const btn = document.getElementById('btn-en');
+  btn.classList.add('loading'); btn.textContent = '⏳ A traduzir…';
+  document.getElementById('spinner').classList.add('show');
+  const payload = {
+    title: state.title, summary: state.summary,
+    experiences: state.experiences.map(ex=>({ company:ex.company,role:ex.role,date:ex.date,desc:ex.desc })),
+    educations:  state.educations.map(ed=>({ school:ed.school,course:ed.course,location:ed.location,date:ed.date })),
+    skills: state.skills
+  };
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000,
+        messages:[{ role:'user', content:`You are a professional CV translator. Translate all text fields from Portuguese (or any language) to professional English. Rules: keep proper nouns, company names, school names and dates exactly as they are. Translate job titles, descriptions, course names. Keep bullet-point lines (starting with •). Return ONLY raw JSON, no markdown or backticks.\n\n${JSON.stringify(payload,null,2)}` }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).map(b=>b.text||'').join('').trim();
+    const translated = JSON.parse(text.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim());
+    applyState({ ...state,
+      title:   translated.title   || state.title,
+      summary: translated.summary || state.summary,
+      experiences: (translated.experiences||[]).map((ex,i)=>({ company:ex.company||state.experiences[i]?.company||'', role:ex.role||state.experiences[i]?.role||'', date:ex.date||state.experiences[i]?.date||'', desc:ex.desc||state.experiences[i]?.desc||'' })),
+      educations:  (translated.educations||[]).map((ed,i)=>({ school:ed.school||state.educations[i]?.school||'', course:ed.course||state.educations[i]?.course||'', location:ed.location||state.educations[i]?.location||'', date:ed.date||state.educations[i]?.date||'' })),
+      skills: translated.skills || state.skills
+    });
+    showToast('✅ Traduzido para inglês!');
+  } catch(err) {
+    console.error(err); showToast('❌ Erro na tradução.','error');
+  } finally {
+    btn.classList.remove('loading'); btn.innerHTML = `<svg class="tb-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h7M5.5 2v2M2 4c0 2.5 1.5 4.5 3.5 5.5M4 9.5C5.5 10.5 7 11 8 11M9 4l3 8M9 4l-1 3M15 12l-3-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Traduzir EN`;
+    document.getElementById('spinner').classList.remove('show');
+  }
+}
+
+// ── TOAST ──
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = type==='error'?'#8b1a1a':'#1a6e3c';
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+render();
+</script>
+</body>
+</html>

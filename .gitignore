@@ -1,0 +1,4 @@
+*.local.json
+*.backup.json
+.env
+.env.*
